@@ -1,0 +1,39 @@
+id: default
+groups: {}
+routes:
+  - id: Dhcgjq
+    name: splunk_metrics_log
+    final: true
+    disabled: false
+    pipeline: splunk_metrics_log
+    description: ""
+    clones: []
+    filter: /[\\/]metrics.log/.test(source) && index=='_internal'
+    output: default
+  - id: z15EMr
+    name: splunkd_log
+    final: true
+    disabled: false
+    pipeline: splunkd_log
+    description: ""
+    clones: []
+    filter: /[\\/]splunkd.log/.test(source) && index=='_internal'
+    output: default
+  - id: TWlfGH
+    name: introspection_log
+    final: true
+    disabled: false
+    pipeline: devnull
+    description: Drop all UF introspection logs
+    clones: []
+    filter: index=='_introspection'
+    output: default
+  - id: default
+    name: default
+    final: true
+    disabled: false
+    pipeline: passthru
+    description: ""
+    clones: []
+    filter: "true"
+    output: default

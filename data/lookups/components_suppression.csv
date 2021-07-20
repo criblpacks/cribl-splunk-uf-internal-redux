@@ -1,0 +1,11 @@
+component_level
+ExecProcessor-ERROR
+TcpOutputProc-INFO
+HttpPubSubConnection-INFO
+TcpOutputFd-WARN
+WatchedFile-INFO
+TcpOutputProc-WARN
+AutoLoadBalancedConnectionStrategy-INFO
+TailReader-INFO
+TcpInputProc-INFO
+TailingProcessor-INFO

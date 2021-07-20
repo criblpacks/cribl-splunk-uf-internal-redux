@@ -1,0 +1,136 @@
+output: default
+groups: {}
+asyncFuncTimeout: 1000
+functions:
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: Some events aren't worth keeping around (adjust as needed)
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "[optional] Drop ALL DEBUG and TRACE"
+  - id: drop
+    filter: /^\S+\s\S+\s[-+0-9]+ (DEBUG|TRACE)/.test(_raw)
+    disabled: false
+    conf: {}
+    final: true
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: Parse the remaining events
+  - id: regex_extract
+    filter: "true"
+    disabled: null
+    conf:
+      source: _raw
+      iterations: 100
+      overwrite: false
+      regex: /^(?<__pre>\S+\s\S+\s[-+0-9]+)\s(?<__level>\w+)\s+(?<__component>\S+)\s(?<__msg>.*)/
+    description: temp fields, used in later steps
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: Create a 2nd message field without numbers
+  - id: eval
+    filter: __msg
+    disabled: null
+    conf:
+      add:
+        - name: __msgcleaned
+          value: __msg.replace(/\d+/g,"X")
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: Aggregate using the normalized msg field, and rebuild _raw
+  - id: aggregation
+    filter: C.Lookup('components_suppression.csv').match(`${__component}-${__level}`)
+    disabled: false
+    conf:
+      passthrough: false
+      preserveGroupBys: false
+      sufficientStatsOnly: false
+      metricsMode: false
+      timeWindow: 300s
+      aggregations:
+        - count(true)
+        - last(__pre)
+        - last(__msg)
+        - last(source)
+        - last(sourcetype)
+        - last(index)
+        - latest(_time)
+      cumulative: false
+      groupbys:
+        - host
+        - __msgcleaned
+        - __level
+        - __component
+      add:
+        - name: __agged
+          value: "true"
+        - name: _raw
+          value: "`${__pre_last} ${__level} ${__component} ${__msg_last},
+            repeated=${true_count}` "
+    description: If the component-loglevel is in the lookup, we're aggregating this log.
+      Will only show the last, with a count of how many times int he last 5
+      minutes
+    final: false
+  - id: eval
+    filter: __agged
+    disabled: null
+    conf:
+      add:
+        - name: window
+          value: endtime-starttime
+      remove:
+        - starttime
+        - endtime
+        - true_count
+  - id: rename
+    filter: __agged
+    disabled: null
+    conf:
+      wildcardDepth: 5
+      rename:
+        - currentName: sourcetype_last
+          newName: sourcetype
+        - currentName: source_last
+          newName: source
+        - currentName: index_last
+          newName: index
+        - currentName: _time_latest
+          newName: _time
+    final: false
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "[optional] _time already exists, lose the timestamp in _raw (breaks
+        default field extracts)"
+  - id: eval
+    filter: _time
+    disabled: true
+    conf:
+      add:
+        - name: _raw
+          value: _raw.replace(/^\S+\s\S+\s[-+0-9]+ /,'')
+    description: Drop time info
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: "[Optional] Reduce source field to just the filename"
+  - id: eval
+    filter: "true"
+    disabled: null
+    conf:
+      add:
+        - name: source
+          value: source.replace(/.*[\\/]/,'./')
+    description: Small reduction in disk hit

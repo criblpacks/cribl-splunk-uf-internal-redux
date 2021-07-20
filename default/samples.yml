@@ -1,0 +1,10 @@
+zhpTuf:
+  sampleName: metrics.log
+  created: 1626099760803
+  size: 108682
+  numEvents: 300
+3IfWac:
+  sampleName: splunkd.log
+  created: 1626208383291
+  size: 125658
+  numEvents: 392

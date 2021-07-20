@@ -1,0 +1,4 @@
+size: 35
+description: Component-level combinations listed here will be suppressed (see aggregation
+  function in splunkd_log pipeline)
+rows: 10
