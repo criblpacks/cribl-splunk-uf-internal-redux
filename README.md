@@ -12,7 +12,9 @@ In this case we are:
     * A repeat count will be added to the logs allowed through.
 * Dropping any metrics logs that are not either name and group =thruput, or group=per_*_thruput
     * Optionally aggregating these based on a lookup value for farm
-    * Aggregation logs will still end up in _internal, with sourcetype and source == 'metrics:agg'
+    * Optionally:
+        * Aggregation logs will still end up in _internal, with sourcetype and source == 'metrics:agg'
+        * - OR - Aggregated stats will be sent to a metrics store (metrics index is `metrics`, adjust as needed in the Aggregation functions)
 * Dropping any introspection logs
 * For splunkd and metrics logs that do make it through, optionally trim the timestamp off _raw
 * Trim source to just the file name (eg, `./splunkd.log`)
@@ -30,6 +32,11 @@ To use this Pack, follow these steps:
 2. Set-up route(s) for splunkd, metrics, and introspection that point to the pack
 
 ## Release Notes
+
+### Version 0.3.1 July 20 2021
+
+* Aggregation of stats sent to metrics store (optional)
+* Comments clean-up
 
 ### Version 0.2 July 13 2021
 

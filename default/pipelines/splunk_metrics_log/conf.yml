@@ -41,16 +41,9 @@ functions:
       type: kvp
       srcField: _raw
       cleanFields: false
-      dstField: stats
-    groupId: OKWSME
-  - id: comment
-    filter: "true"
-    disabled: false
-    conf:
-      comment: Lookup host mapping
     groupId: OKWSME
   - id: lookup
-    filter: stats.group.startsWith('per_')
+    filter: group.startsWith('per_')
     disabled: false
     conf:
       matchMode: regex
@@ -67,14 +60,6 @@ functions:
           eventField: farm
     groupId: OKWSME
     description: Lookup farm (pod, env, whatever) for aggregations
-  - id: eval
-    filter: farm
-    disabled: false
-    conf:
-      add:
-        - name: stats.series
-          value: "stats.series == host ? farm : stats.series"
-    groupId: OKWSME
   - id: aggregation
     filter: farm
     disabled: false
@@ -85,16 +70,13 @@ functions:
       metricsMode: true
       timeWindow: 30s
       aggregations:
-        - avg(stats.avg_age).as('avg_age')
-        - max(stats.avg_age).as('max_avg_age')
-        - sum(stats.ev).as('ev')
-        - sum(stats.kb).as('kb')
-        - max(stats.max_age).as('max_age')
+        - max(avg_age).as('uf.thruput.max_age')
+        - sum(ev).as('uf.thruput.ev')
+        - sum(kb).as('uf.thruput.kb')
       cumulative: false
       groupbys:
-        - host
-        - stats.group
-        - stats.series
+        - series
+        - farm
       add:
         - name: index
           value: "'metrics'"
@@ -127,7 +109,7 @@ functions:
       comment: Lookup host mapping
     groupId: RF1qBS
   - id: lookup
-    filter: stats.name == 'thruput'
+    filter: stats.name == 'thruput' && ! __criblMetrics
     disabled: false
     conf:
       matchMode: regex
@@ -145,7 +127,7 @@ functions:
     groupId: RF1qBS
     description: Lookup farm (pod, env, whatever) for aggregations
   - id: aggregation
-    filter: farm
+    filter: farm && ! __criblMetrics
     disabled: false
     conf:
       passthrough: false
@@ -154,9 +136,9 @@ functions:
       metricsMode: true
       timeWindow: 30s
       aggregations:
-        - sum(stats.kb).as('kb')
-        - sum(stats.ev).as('ev')
-        - avg(stats.load_average).as('load_avg')
+        - sum(stats.kb).as('uf.thruput.kb')
+        - sum(stats.ev).as('uf.thruput.ev')
+        - avg(stats.load_average).as('uf.os.load_avg')
       cumulative: false
       groupbys:
         - farm
