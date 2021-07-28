@@ -1,29 +1,34 @@
 name: Build Release
-on: 
+on:
   push:
     tags:
       - 'v?[0-9]+.[0-9]+.[0-9]+'
       - 'v?[0-9]+.[0-9]+.[0-9]+-[RT]C[0-9]+'
+
 jobs:
   release:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: GitHub slug
+
+      - name: Get GitHub slug info
         uses: rlespinasse/github-slug-action@3.5.1
+
       - name: Pack it up!
         run: tar -czf /tmp/${{ github.event.repository.name }}-${{ env.GITHUB_SHA_SHORT }}-${{ env.GITHUB_REF_SLUG_CS }}.crbl *
+
       - name: Release
         if: ${{ success() }}
         id: release
-        uses: softprops/action-gh-release@master
+        uses: softprops/action-gh-release@5e3f23f92c903aac25270f66388fdcb366c5b549
         with:
           prerelease: ${{ contains(github.ref, 'RC') || contains(github.ref, 'TC') }}
           files: /tmp/${{ github.event.repository.name }}-${{ env.GITHUB_SHA_SHORT }}-${{ env.GITHUB_REF_SLUG_CS }}.crbl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Get Release Info
+
+      - name: Get release info
         if: ${{ success() }}
         id: release_info
         uses: cardinalby/git-get-release-action@1.1.1
@@ -31,11 +36,13 @@ jobs:
           releaseId: "${{ steps.release.outputs.id }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Timestamp
+
+      - name: Extract timestamp
         if: ${{ success() }}
         run: |
           echo "TIMESTAMP=$(date +%s -d "${{ steps.release_info.outputs.published_at }}")" >> $GITHUB_ENV
-      - name: Send GitHub Action trigger data to Slack workflow
+
+      - name: Slack notification (production releases only)
         if: ${{ success() && steps.release_info.outputs.prerelease == 'false' }}
         id: slack
         uses: wearerequired/slack-messaging-action@v1
