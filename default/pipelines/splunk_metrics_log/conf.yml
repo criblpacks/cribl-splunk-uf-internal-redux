@@ -3,22 +3,39 @@ groups:
   OKWSME:
     name: Aggregate per_*_thruput to metrics
     description: use lookup to assign group name, then aggregate by that group
-    disabled: false
+    disabled: true
     index: 3
   RF1qBS:
     name: Aggregate thruput to metrics
     description: use lookup to assign group name, then aggregate by that group
     index: 4
-    disabled: false
+    disabled: true
 asyncFuncTimeout: 1000
 functions:
   - id: comment
     filter: "true"
     disabled: null
     conf:
-      comment: Drop all metrics that are not thruput related
+      comment: >
+        Reduce metrics logs from Forwarders. See the README for how to enable
+        this Pack. 
+
+
+        First, we'll drop anything that is not "group=per_*" or "group=thruput name=thruput".
+
+
+        Next, we'll optionally aggregate and metrics-ify the remaining data into 2 bundles BY FARM. One for per_ group and one for the overall thruput. The stats are aggregated by farm as defined in the host_mapping.csv lookup. You can change the pipeline to aggregate by host instead, and drop the farm lookup. You won't get as much reduction, but you'll still get the benefits of converting to metrics. And you can adjust the aggregation time period as desired.
+
+
+        ** YOU MUST DEFINE THE INDEX IN THE AGGREGATION FUNCTIONS IF YOU USE THE AGGREGATIONS **
+
+
+        Next, and optionally, the timestamp and log level info are trimmed from _raw, IFF we have not aggregated.
+
+
+        Finally, and optionally, we trim the source field down to just './metrics.log'. Every little bit helps :-)
   - id: drop
-    filter: "! (/group=per_/.test(_raw) || /group=thruput, name=thruput/.test(_raw))"
+    filter: "! (/group=(?:per|thruput name=thruput)/.test(_raw))"
     disabled: null
     conf: {}
     final: true
@@ -27,15 +44,9 @@ functions:
     disabled: null
     conf:
       comment: "[optional] Aggregate by farm into metrics index"
-  - id: comment
-    filter: "true"
-    disabled: false
-    conf:
-      comment: Pull the stats into stats
-    groupId: OKWSME
   - id: serde
     filter: /group=per_/.test(_raw)
-    disabled: false
+    disabled: true
     conf:
       mode: extract
       type: kvp
@@ -44,7 +55,7 @@ functions:
     groupId: OKWSME
   - id: lookup
     filter: group.startsWith('per_')
-    disabled: false
+    disabled: true
     conf:
       matchMode: regex
       matchType: first
@@ -62,7 +73,7 @@ functions:
     description: Lookup farm (pod, env, whatever) for aggregations
   - id: aggregation
     filter: farm
-    disabled: false
+    disabled: true
     conf:
       passthrough: false
       preserveGroupBys: false
@@ -86,15 +97,9 @@ functions:
           value: "'metrics:aggs'"
     groupId: OKWSME
     final: false
-  - id: comment
-    filter: "true"
-    disabled: false
-    conf:
-      comment: Pull the stats into stats
-    groupId: RF1qBS
   - id: serde
     filter: /group=thruput/.test(_raw)
-    disabled: false
+    disabled: true
     conf:
       mode: extract
       type: kvp
@@ -102,15 +107,9 @@ functions:
       cleanFields: false
       dstField: stats
     groupId: RF1qBS
-  - id: comment
-    filter: "true"
-    disabled: false
-    conf:
-      comment: Lookup host mapping
-    groupId: RF1qBS
   - id: lookup
     filter: stats.name == 'thruput' && ! __criblMetrics
-    disabled: false
+    disabled: true
     conf:
       matchMode: regex
       matchType: first
@@ -128,7 +127,7 @@ functions:
     description: Lookup farm (pod, env, whatever) for aggregations
   - id: aggregation
     filter: farm && ! __criblMetrics
-    disabled: false
+    disabled: true
     conf:
       passthrough: false
       preserveGroupBys: false

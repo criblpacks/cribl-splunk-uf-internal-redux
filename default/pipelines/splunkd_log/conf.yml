@@ -1,22 +1,36 @@
 output: default
-groups: {}
+groups:
+  HrngV7:
+    name: Aggregate by msg
+    description: Using somewhat normalized message text, aggregate if the component and
+      level are in the lookup
+    index: 2
 asyncFuncTimeout: 1000
 functions:
   - id: comment
     filter: "true"
     disabled: null
     conf:
-      comment: "[optional] Drop ALL DEBUG and TRACE"
+      comment: >
+        Drop some events, aggregate others, and allow others through (mostly)
+        unharmed. See README for how to enable the Pack.
+
+
+        First, we'll drop anything with a log level of DEBUG or TRACE. Sometimes they get turned on and flood your internal indexes.
+
+
+        Next, we'll extract the component and the message. A temp msg field will be created by removing numbers from the text. We'll use this new msg field to aggregate if the component and log level are in the `components_supression.csv` lookup. We've provided some suggested targets. Change as you see fit. Suppressed events will include a ` repeated=#` tag appended to the end, and a window index time field for the timeframe the aggregation happened in. Eg, 30 seconds.
+
+
+        Next, and optionally, the timestamp is trimmed from _raw.
+
+
+        Finally, and optionally, we trim the source field down to just `./splunkd.log`. Every little bit helps :-)
   - id: drop
     filter: /^\S+\s\S+\s[-+0-9]+ (DEBUG|TRACE)/.test(_raw)
     disabled: false
     conf: {}
     final: true
-  - id: comment
-    filter: "true"
-    disabled: null
-    conf:
-      comment: Aggregate using a normalized msg field, and rebuild _raw
   - id: regex_extract
     filter: "true"
     disabled: false
@@ -26,6 +40,7 @@ functions:
       overwrite: false
       regex: /^(?<__pre>\S+\s\S+\s[-+0-9]+)\s(?<__level>\w+)\s+(?<__component>\S+)\s(?<__msg>.*)/
     description: temp fields, used in later steps
+    groupId: HrngV7
   - id: eval
     filter: __msg
     disabled: null
@@ -35,6 +50,7 @@ functions:
           value: __msg.replace(/\d+/g,"X")
     description: Create a copy of msg without numbers to "normalize it" for aggregation
       purposes
+    groupId: HrngV7
   - id: aggregation
     filter: C.Lookup('components_suppression.csv').match(`${__component}-${__level}`)
     disabled: false
@@ -67,6 +83,7 @@ functions:
       Will only show the last, with a count of how many times int he last 5
       minutes
     final: false
+    groupId: HrngV7
   - id: eval
     filter: __agged
     disabled: null
@@ -78,6 +95,7 @@ functions:
         - starttime
         - endtime
         - count
+    groupId: HrngV7
   - id: comment
     filter: "true"
     disabled: null
