@@ -21,6 +21,12 @@ To use this Pack, follow these steps:
 
 ## Release Notes
 
+### Version 0.3.4 Aug 13 2021
+
+* Re-wrote Agg function to be cleaner
+* Moved regex extract to the top
+* Used __level from regex extract for drop function instead of full _raw
+
 ### Version 0.3.3 July 27 2021
 
 * Aggregation of stats sent to metrics store (optional)
