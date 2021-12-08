@@ -1,10 +1,5 @@
 output: default
-groups:
-  HrngV7:
-    name: Aggregate by msg
-    description: Using somewhat normalized message text, aggregate if the component and
-      level are in the lookup
-    index: 3
+groups: {}
 asyncFuncTimeout: 1000
 functions:
   - id: comment
@@ -12,20 +7,19 @@ functions:
     disabled: null
     conf:
       comment: >
-        Drop some events, aggregate others, and allow others through (mostly)
-        unharmed. See README for how to enable the Pack.
+        See the README for full details
+
+
+        Drop some events, aggregate others, and allow others through (mostly) unharmed. See README for how to enable the Pack.
 
 
         First, we'll drop anything with a log level of DEBUG or TRACE. Sometimes they get turned on and flood your internal indexes.
 
 
-        Next, we'll extract the component and the message. A temp msg field will be created by removing numbers from the text. We'll use this new msg field to aggregate if the component and log level are in the `components_supression.csv` lookup. We've provided some suggested targets. Change as you see fit. Suppressed events will include a ` repeated=#` tag appended to the end, and a window index time field for the timeframe the aggregation happened in. Eg, 30 seconds.
+        Next, we'll extract the component and the message. A punct field will be created by removing letters, numbers and spaces from the text. We'll use punct and host to aggregate if the component and log level are in the `components_supression.csv` lookup. We've provided some suggested targets. Change as you see fit. Suppressed events will include a ` repeated=#` tag appended to the end, and a window index time field for the timeframe the aggregation happened in. Eg, 30 seconds.
 
 
-        Next, and optionally, the timestamp is trimmed from _raw.
-
-
-        Finally, and optionally, we trim the source field down to just `./splunkd.log`. Every little bit helps :-)
+        Next, and optionally, the timestamp is trimmed from _raw, source is trimmed, and any reference to the $splunkhome path is reduced to $SPLUNK
   - id: regex_extract
     filter: "true"
     disabled: false
@@ -40,67 +34,59 @@ functions:
     disabled: false
     conf: {}
     final: true
+  - id: comment
+    filter: "true"
+    disabled: null
+    conf:
+      comment: |-
+        Suppress repeated logs
+        - Create punct field
+        - Suppress based on host, punct, component and level
+        - Add repeated= counter to the end of surviving Suppressed events
   - id: eval
     filter: __msg
     disabled: null
     conf:
       add:
-        - name: __msgcleaned
-          value: __msg.replace(/\d+/g,"X")
-    description: Create a copy of msg without numbers to "normalize it" for aggregation
-      purposes
-    groupId: HrngV7
-  - id: aggregation
+        - name: __punct
+          value: __msg.replace(/[\sa-zA-Z0-9]+/g,"_")
+    description: Use the msg "punct" to identify similar messages (spaces, letters and
+      numbers replaced with _)
+  - id: suppress
     filter: C.Lookup('components_suppression.csv').match(`${__component}-${__level}`)
     disabled: false
     conf:
-      passthrough: false
-      preserveGroupBys: false
-      sufficientStatsOnly: false
-      metricsMode: false
-      timeWindow: 300s
-      aggregations:
-        - count()
-        - last(_raw).as('_raw')
-        - last(source).as('source')
-        - last(sourcetype).as('sourcetype')
-        - last(index).as('index')
-        - last(_time).as('_time')
-      cumulative: false
-      flushOnInputClose: true
-      groupbys:
-        - host
-        - __msgcleaned
-        - __level
-        - __component
-      add:
-        - name: __agged
-          value: "true"
-        - name: _raw
-          value: "`${_raw}, repeated=${count}` "
-    description: If the component-loglevel is in the lookup, we're aggregating this log.
-      Will only show the last, with a count of how many times int he last 5
-      minutes
-    final: false
-    groupId: HrngV7
+      allow: 1
+      suppressPeriodSec: 30
+      dropEventsMode: true
+      maxCacheSize: 50000
+      cacheIdleTimeoutPeriods: 2
+      numEventsIdleTimeoutTrigger: 10000
+      keyExpr: "`${host}-${__punct}-${__component}-${__level}`"
+    description: If the component-level is listed in the suppression lookup
   - id: eval
-    filter: __agged
+    filter: suppressCount
     disabled: null
     conf:
       add:
         - name: window
-          value: endtime-starttime
+          value: "30"
+        - name: _raw
+          value: "`${_raw}, repeated=${suppressCount}`"
       remove:
-        - starttime
-        - endtime
-        - count
-    groupId: HrngV7
+        - suppressCount
   - id: comment
     filter: "true"
     disabled: null
     conf:
-      comment: "[optional] _time already exists, lose the timestamp in _raw (breaks
-        default field extracts)"
+      comment: >-
+        [optional] 
+
+        * _time already exists, lose the timestamp in _raw (breaks default field extracts)
+
+        * replace references to $SPLUNKHOME
+
+        * replace source field with './splunkd.log'
   - id: eval
     filter: _time
     disabled: false
@@ -108,17 +94,10 @@ functions:
       add:
         - name: _raw
           value: _raw.replace(/^\S+\s\S+\s[-+0-9]+ /,'')
-    description: Drop time info
-  - id: comment
-    filter: "true"
-    disabled: null
-    conf:
-      comment: "[optional] Reduce source field to just the filename"
-  - id: eval
-    filter: "true"
-    disabled: null
-    conf:
-      add:
+        - name: _raw
+          value: _raw.replace(/\/[a-zA-Z\/]+splunkforwarder\//g,'$SPLUNK/')
         - name: source
           value: source.replace(/.*[\\/]/,'./')
-    description: Small reduction in disk hit
+      remove:
+        - suppress
+    description: minor adjustments for much glory
