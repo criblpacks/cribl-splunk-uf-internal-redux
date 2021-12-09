@@ -85,12 +85,13 @@ functions:
         - sum(ev).as('uf.thruput.ev')
         - sum(kb).as('uf.thruput.kb')
       cumulative: false
+      flushOnInputClose: true
       groupbys:
         - series
         - farm
       add:
         - name: index
-          value: "'metrics'"
+          value: "'_metrics'"
         - name: source
           value: "'metrics:aggs'"
         - name: sourcetype
@@ -139,11 +140,12 @@ functions:
         - sum(stats.ev).as('uf.thruput.ev')
         - avg(stats.load_average).as('uf.os.load_avg')
       cumulative: false
+      flushOnInputClose: true
       groupbys:
         - farm
       add:
         - name: index
-          value: "'metrics'"
+          value: "'_metrics'"
         - name: source
           value: "'metrics:aggs'"
         - name: sourcetype

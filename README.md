@@ -14,7 +14,7 @@ Intended for `$SPLUNK/var/log/splunk/metrics.log` files
 2. Optionally aggregate the events into Metrics events
     * There are 2 Aggregate functions: 1 for `per_*_thruput` and one for `thruput`
     * There is also the option to lookup the host to get a farm or pod to group by
-    * *NOTE: If you choose to do this, these will no longer be _internal events and will now count against your license*
+    * Metrics will be delivered to _metrics by default; modify if needed but be aware of license impacy
 3. Use the Trim function to remove the timestamp text from _raw (we already have _time)
 4. Rewrite source field to just the file name, eg `./metrics.log`
 
@@ -50,6 +50,10 @@ To use this Pack, follow these steps:
 *Note: I do not recommend using this as a pre-processor pipeline unless you have a source defined that solely receives internal logs*
 
 ## Release Notes
+
+### Version 1.0.1 Dec 9, 2021
+
+* Updated docs to reference _metrics as default metrics destination index
 
 ### Version 1.0.0 Dec 7, 2021
 
