@@ -51,6 +51,10 @@ To use this Pack, follow these steps:
 
 ## Release Notes
 
+### Version 1.0.2 Feb 26, 2024
+
+* Updated this README. Same as previous release.
+
 ### Version 1.0.1 Dec 9, 2021
 
 * Updated docs to reference _metrics as default metrics destination index

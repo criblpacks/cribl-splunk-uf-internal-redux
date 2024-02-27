@@ -1,1 +1,1 @@
-{"name":"cribl-splunk-uf-internal-redux","version":"1.0.1","minLogStreamVersion":"3.0.0","author":"Jon Rust - Cribl","description":"Reduce Forwarder internal logs to save resources in Splunkytown","displayName":"Splunk UF Internal Pack"}
+{"name":"cribl-splunk-uf-internal-redux","version":"1.0.2","minLogStreamVersion":"3.0.0","author":"Jon Rust - Cribl","description":"Reduce Forwarder internal logs to save resources in Splunkytown","displayName":"Splunk UF Internal Pack"}
